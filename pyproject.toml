@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "sbi_diagnostics"
+version = "0.1.0"
+description = "Diagnostics for JAXILI NPE posteriors"
+requires-python = ">=3.11"
+dependencies = [
+    "jax",
+    "jaxili",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "getdist",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["sbi_diagnostics*"]

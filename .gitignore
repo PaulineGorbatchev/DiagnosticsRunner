@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data / outputs (don't commit large files)
+*.npz
+*.npy
+*.fits
+diagnosis/
+SBI_samples/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
