@@ -1,6 +1,6 @@
 # sbi_diagnostics
 
-A Python package for validating and diagnosing trained [JAXILI](https://github.com/justinalsing/jaxili) Neural Posterior Estimation (NPE) posteriors in simulation-based inference workflows.
+A Python package for validating and diagnosing trained [JAXILI](https://github.com/sachaguer/jaxili) Neural Posterior Estimation (NPE) posteriors in simulation-based inference workflows.
 
 It wraps a suite of standard SBI diagnostics — shrinkage tests, SBC rank histograms, coverage probability, posterior predictive checks, and more — into a single callable object that saves every plot and a numerical summary in one step.
 
