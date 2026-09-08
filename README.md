@@ -25,11 +25,15 @@ All plots are saved as PDFs. A `diagnostics_summary.json` with numerical results
 
 ## Installation
 
+Clone the repository and install it in editable mode:
+
 ```bash
-git clone https://github.com/<your-username>/DiagnosticsRunner.git
+git clone https://github.com/PaulineGorbatchev/DiagnosticsRunner.git
 cd DiagnosticsRunner
 pip install -e .
 ```
+
+Since the repository is private, Git will ask for your GitHub username and a [personal access token](https://github.com/settings/tokens/new) (with the `repo` scope) as the password.
 
 **Dependencies** (installed automatically): `jax`, `jaxili`, `numpy`, `matplotlib`, `scipy`, `getdist`.
 
