@@ -6,7 +6,6 @@ Run on the server where jax + jaxili are installed:
 """
 import os
 import sys
-import tempfile
 import numpy as np
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -46,16 +45,16 @@ posterior = MockPosterior()
 # ---------------------------------------------------------------------------
 from sbi_diagnostics import DiagnosticsConfig, DiagnosticsRunner
 
-with tempfile.TemporaryDirectory() as tmpdir:
-    cfg = DiagnosticsConfig(
-        output_dir=tmpdir,
+OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_output")
+
+cfg = DiagnosticsConfig(
+        output_dir=OUTPUT_DIR,
         data_variant="smoke_test",
         resolution="test",
         parameter_names=[r"$\Omega_m$", r"$h$"],
         fiducial={"Om": 0.3, "h": 0.7},
         seed=42,
-        use_latex=False,           # avoid requiring LaTeX in the test env
-        # Speed things up
+        use_latex=False,
         num_samples_posterior=500,
         num_samples_sensitivity=200,
         num_x_conds=3,
@@ -70,32 +69,33 @@ with tempfile.TemporaryDirectory() as tmpdir:
         recovery_post_samples=100,
         final_num_samples=500,
         save_samples=True,
-    )
+)
 
-    runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg)
+runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg)
 
-    print("=== Running all diagnostics ===")
-    results = runner.run_all()
+print("=== Running all diagnostics ===")
+results = runner.run_all()
 
-    # Check every expected PDF was produced
-    expected = [
-        "prior_vs_posterior_smoke_test.pdf",
-        "posterior_mean_sensitivity_smoke_test.pdf",
-        "sbc_ranks_smoke_test.pdf",
-        "coverage_probability_smoke_test.pdf",
-        "posterior_predictive_check_smoke_test.pdf",
-        "parameter_recovery_smoke_test.pdf",
-        "triangle_plot_smoke_test.pdf",
-        "diagnostics_summary.json",
-        "samples_smoke_test.npy",
-    ]
+# Check every expected PDF was produced
+expected = [
+    "prior_vs_posterior_smoke_test.pdf",
+    "posterior_mean_sensitivity_smoke_test.pdf",
+    "sbc_ranks_smoke_test.pdf",
+    "coverage_probability_smoke_test.pdf",
+    "posterior_predictive_check_smoke_test.pdf",
+    "parameter_recovery_smoke_test.pdf",
+    "triangle_plot_smoke_test.pdf",
+    "diagnostics_summary.json",
+    "samples_smoke_test.npy",
+]
 
-    out_dir = cfg.dir_path
-    missing = [f for f in expected if not os.path.exists(os.path.join(out_dir, f))]
+out_dir = cfg.dir_path
+missing = [f for f in expected if not os.path.exists(os.path.join(out_dir, f))]
 
-    if missing:
-        print(f"\nFAIL — missing output files: {missing}")
-        sys.exit(1)
-    else:
-        print(f"\nPASS — all {len(expected)} output files produced.")
-        print(f"Keys in results: {list(results.keys())}")
+if missing:
+    print(f"\nFAIL — missing output files: {missing}")
+    sys.exit(1)
+else:
+    print(f"\nPASS — all {len(expected)} output files produced.")
+    print(f"Output folder: {os.path.abspath(out_dir)}")
+    print(f"Keys in results: {list(results.keys())}")
