@@ -1,6 +1,7 @@
 """Triangle (corner) plot using getdist."""
 
 import os
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 import warnings
@@ -27,11 +28,16 @@ def run(
     """
     print("\n================ TRIANGLE PLOT ================")
 
+    # getdist wraps labels in $ itself, so strip any surrounding $ from parameter_names
+    labels = [n.strip("$") for n in cfg.parameter_names]
+    # names must be plain identifiers (no LaTeX)
+    names = [re.sub(r"[^A-Za-z0-9_]", "_", n.strip("$")) for n in cfg.parameter_names]
+
     gd_samples = [
         MCSamples(
             samples=samples_np,
-            names=cfg.parameter_names,
-            labels=cfg.parameter_names,
+            names=names,
+            labels=labels,
         )
     ]
     colors = ["blue"]
@@ -41,8 +47,8 @@ def run(
             gd_samples.append(
                 MCSamples(
                     samples=s,
-                    names=cfg.parameter_names,
-                    labels=cfg.parameter_names,
+                    names=names,
+                    labels=labels,
                 )
             )
         colors += (extra_colors or ["red", "green", "orange"][: len(extra_samples)])
