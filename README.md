@@ -196,6 +196,21 @@ See [example_run.py](example_run.py) for a full end-to-end example including dat
 
 ---
 
+## Citation
+
+If you use this package, please cite it as:
+
+```bibtex
+@software{sbi_diagnostics,
+  author  = {Gorbatchev, Pauline},
+  title   = {sbi\_diagnostics: Diagnostics for JAXILI NPE Posteriors},
+  url     = {https://github.com/PaulineGorbatchev/DiagnosticsRunner},
+  version = {0.1.0}
+}
+```
+
+---
+
 ## License
 
 MIT
