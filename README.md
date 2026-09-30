@@ -33,8 +33,6 @@ cd DiagnosticsRunner
 pip install -e .
 ```
 
-Since the repository is private, Git will ask for your GitHub username and a [personal access token](https://github.com/settings/tokens/new) (with the `repo` scope) as the password.
-
 **Dependencies** (installed automatically): `jax`, `jaxili`, `numpy`, `matplotlib`, `scipy`, `getdist`.
 
 ---
