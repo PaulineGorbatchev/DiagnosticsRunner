@@ -2,6 +2,8 @@
 
 import os
 import json
+import shutil
+import warnings
 import jax
 import numpy as np
 import matplotlib
@@ -31,15 +33,37 @@ class DiagnosticsRunner:
     thetas      : simulation parameters, shape (N, n_params)
     obs         : observed data summary, shape (d,)
     cfg         : DiagnosticsConfig (optional — uses defaults if omitted)
+    test_x      : held-out simulation summaries, shape (M, d) (optional)
+    test_thetas : held-out simulation parameters, shape (M, n_params) (optional)
+
+    SBC, coverage and parameter recovery should be run on simulations that
+    were not used to train the posterior. Pass them as ``test_x`` and
+    ``test_thetas``. If they are omitted, these diagnostics fall back to
+    ``x`` and ``thetas`` and a warning is issued.
     """
 
     def __init__(self, posterior, x: np.ndarray, thetas: np.ndarray,
-                 obs: np.ndarray, cfg: DiagnosticsConfig | None = None):
+                 obs: np.ndarray, cfg: DiagnosticsConfig | None = None,
+                 test_x: np.ndarray | None = None,
+                 test_thetas: np.ndarray | None = None):
         self.posterior = posterior
         self.x = np.asarray(x, dtype=np.float32)
         self.thetas = np.asarray(thetas, dtype=np.float32)
         self.obs = np.asarray(obs, dtype=np.float32)
         self.cfg = cfg or DiagnosticsConfig()
+        if (test_x is None) != (test_thetas is None):
+            raise ValueError("Pass both test_x and test_thetas, or neither.")
+        if test_x is None:
+            warnings.warn(
+                "No held-out test set given: SBC, coverage and parameter recovery "
+                "will use x and thetas. If these are the training simulations, "
+                "the calibration tests are not reliable. Pass test_x and test_thetas.",
+                stacklevel=2,
+            )
+            self.test_x, self.test_thetas = self.x, self.thetas
+        else:
+            self.test_x = np.asarray(test_x, dtype=np.float32)
+            self.test_thetas = np.asarray(test_thetas, dtype=np.float32)
         self._samples_np: np.ndarray | None = None
         self._results: dict = {}
 
@@ -59,7 +83,7 @@ class DiagnosticsRunner:
             self.posterior, self.obs, self.x, self.cfg
         )
         self._results["sbc"] = sbc.run(
-            self.posterior, self.x, self.thetas, self.cfg
+            self.posterior, self.test_x, self.test_thetas, self.cfg
         )
 
         samples_np = self._get_or_sample()
@@ -68,13 +92,13 @@ class DiagnosticsRunner:
         triangle_plot.run(samples_np, self.cfg)
 
         self._results["coverage"] = coverage.run(
-            self.posterior, self.x, self.thetas, self.cfg
+            self.posterior, self.test_x, self.test_thetas, self.cfg
         )
         self._results["ppc"] = ppc.run(
             samples_np, self.obs, self.x, self.thetas, self.cfg
         )
         self._results["parameter_recovery"] = parameter_recovery.run(
-            self.posterior, self.x, self.thetas, self.cfg
+            self.posterior, self.test_x, self.test_thetas, self.cfg
         )
         self._results["validation_loss"] = validation_loss.run(self.cfg)
 
@@ -93,11 +117,11 @@ class DiagnosticsRunner:
 
     def diag_sbc(self) -> dict:
         self._setup()
-        return sbc.run(self.posterior, self.x, self.thetas, self.cfg)
+        return sbc.run(self.posterior, self.test_x, self.test_thetas, self.cfg)
 
     def diag_coverage(self) -> dict:
         self._setup()
-        return coverage.run(self.posterior, self.x, self.thetas, self.cfg)
+        return coverage.run(self.posterior, self.test_x, self.test_thetas, self.cfg)
 
     def diag_ppc(self) -> dict:
         self._setup()
@@ -106,7 +130,7 @@ class DiagnosticsRunner:
 
     def diag_parameter_recovery(self) -> dict:
         self._setup()
-        return parameter_recovery.run(self.posterior, self.x, self.thetas, self.cfg)
+        return parameter_recovery.run(self.posterior, self.test_x, self.test_thetas, self.cfg)
 
     def diag_validation_loss(self) -> dict:
         return validation_loss.run(self.cfg)
@@ -124,7 +148,11 @@ class DiagnosticsRunner:
     def _setup(self):
         os.makedirs(self.cfg.dir_path, exist_ok=True)
         if self.cfg.use_latex:
-            plt.rcParams["text.usetex"] = True
+            if shutil.which("latex"):
+                plt.rcParams["text.usetex"] = True
+            else:
+                warnings.warn("use_latex=True but no LaTeX installation was found. "
+                              "Plotting without LaTeX.", stacklevel=2)
 
     def _get_or_sample(self) -> np.ndarray:
         if self._samples_np is not None:

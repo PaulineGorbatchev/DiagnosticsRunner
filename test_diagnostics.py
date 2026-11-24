@@ -1,6 +1,6 @@
 """
 Smoke test for sbi_diagnostics using a mock posterior.
-Run on the server where jax + jaxili are installed:
+Needs jax but not jaxili. Run with:
 
     python test_diagnostics.py
 """
@@ -37,6 +37,8 @@ rng = np.random.default_rng(0)
 thetas = rng.uniform([0.2, 0.6], [0.4, 0.8], size=(N, N_PARAMS)).astype(np.float32)
 x      = rng.normal(size=(N, D)).astype(np.float32)
 obs    = rng.normal(size=D).astype(np.float32)
+test_thetas = rng.uniform([0.2, 0.6], [0.4, 0.8], size=(100, N_PARAMS)).astype(np.float32)
+test_x      = rng.normal(size=(100, D)).astype(np.float32)
 
 posterior = MockPosterior()
 
@@ -71,7 +73,8 @@ cfg = DiagnosticsConfig(
         save_samples=True,
 )
 
-runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg)
+runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg,
+                           test_x=test_x, test_thetas=test_thetas)
 
 print("=== Running all diagnostics ===")
 results = runner.run_all()

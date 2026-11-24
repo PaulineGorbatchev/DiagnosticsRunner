@@ -29,6 +29,7 @@ class DiagnosticsConfig:
     # PPC
     ppc_num_samples: int = 100
     ppc_knn: int = 5
+    ppc_noise_std: float = 0.01
 
     # Parameter recovery
     recovery_num_test: int = 100

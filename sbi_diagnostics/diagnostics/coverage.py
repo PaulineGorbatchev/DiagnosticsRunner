@@ -19,17 +19,18 @@ def compute_coverage(
     n_params = test_thetas.shape[1]
     coverages = np.zeros((len(credibility_levels), n_params))
 
-    for i, cred in enumerate(credibility_levels):
-        counts = np.zeros(n_params)
-        for j in range(n_test):
-            key = jax.random.PRNGKey(j + 1234)
-            s = posterior.sample(x=test_x[j], num_samples=num_samples, key=key)
+    # Draw the posterior samples once per test case and reuse them for
+    # every credibility level.
+    for j in range(n_test):
+        key = jax.random.PRNGKey(j + 1234)
+        s = np.asarray(posterior.sample(x=test_x[j], num_samples=num_samples, key=key))
+        for i, cred in enumerate(credibility_levels):
             for p in range(n_params):
                 lo = np.percentile(s[:, p], 50 * (1 - cred))
                 hi = np.percentile(s[:, p], 50 * (1 + cred))
                 if lo <= test_thetas[j, p] <= hi:
-                    counts[p] += 1
-        coverages[i] = counts / n_test
+                    coverages[i, p] += 1
+    coverages /= n_test
 
     return coverages
 

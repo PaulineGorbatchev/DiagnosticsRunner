@@ -1,9 +1,10 @@
 """
-Example: replace the training block in your script with this.
-All paths are the same as your original notebook.
+Example: train a JAXILI NPE posterior and run all diagnostics.
+
+The data paths below are placeholders. Replace them with your own files.
+Requires jaxili:  pip install -e ".[jaxili]"
 """
 import os
-import warnings
 
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 os.environ["JAX_PLATFORMS"] = "cpu"
@@ -30,13 +31,13 @@ BINS_min, BINS_max = 150, 400
 plt.rcParams["text.usetex"] = True
 
 # ===================== LOAD DATA =====================
-data = np.load(f"l1_SBI/{RESOLUTION}/Colore_l1_{DATA_VARIANT}_8000_Lband_theoritical_noise.npz")
+data = np.load(f"l1_SBI/{RESOLUTION}/Colore_l1_{DATA_VARIANT}_8000_Lband_theoretical_noise.npz")
 cosmologies = data["cosmologies"]
 l1 = data["l1"][:, BINS_min:BINS_max]
 thetas = cosmologies[:, [0, 1]].astype(np.float32)
 
 obs = np.load(
-    f"True_l1_colore/{RESOLUTION}/Lband_l1_{DATA_VARIANT}_theoritical_noise.npy",
+    f"True_l1_colore/{RESOLUTION}/Lband_l1_{DATA_VARIANT}_theoretical_noise.npy",
     allow_pickle=True,
 ).flatten()[BINS_min:BINS_max]
 
@@ -51,9 +52,18 @@ x   = l1.astype(np.float32)
 assert not np.isnan(x).any()
 assert not np.isnan(thetas).any()
 
+# ===================== HELD-OUT TEST SET =====================
+# Keep simulations out of training for SBC, coverage and parameter recovery.
+N_TEST = 500
+perm = jr.permutation(jr.PRNGKey(SEED + 1), x.shape[0])
+perm = np.asarray(perm)
+test_idx, train_idx = perm[:N_TEST], perm[N_TEST:]
+x_train, thetas_train = x[train_idx], thetas[train_idx]
+x_test, thetas_test = x[test_idx], thetas[test_idx]
+
 # ===================== SBI TRAINING =====================
 inference = NPE()
-inference = inference.append_simulations(thetas, x)
+inference = inference.append_simulations(thetas_train, x_train)
 metrics, density_estimator = inference.train(
     checkpoint_path=os.path.abspath("."),
     learning_rate=1e-2,
@@ -66,18 +76,19 @@ posterior = inference.build_posterior()
 # ===================== DIAGNOSTICS =====================
 cfg = DiagnosticsConfig(
     output_dir="diagnosis",
-    data_variant=f"{DATA_VARIANT}_Lband_theoritical_noise_normal",
+    data_variant=f"{DATA_VARIANT}_Lband_theoretical_noise_normal",
     resolution=RESOLUTION,
     parameter_names=[r"$\Omega_m$", r"$h$"],
     fiducial={"Om": 0.3, "h": 0.7},
     seed=123,
     # point at your training metrics for the val-loss plot:
-    validation_loss_dir="/nas/homes/pauline/workspace/CODE/Project_FR/NDE_w_Standardization",
+    validation_loss_dir="path/to/NDE_w_Standardization",
     # where to save the final posterior samples:
-    samples_output_path=f"SBI_samples/{RESOLUTION}/l1_{DATA_VARIANT}_8000_FINAL_processed_theoritical_noise_normal.npy",
+    samples_output_path=f"SBI_samples/{RESOLUTION}/l1_{DATA_VARIANT}_8000_FINAL_processed_theoretical_noise_normal.npy",
 )
 
-runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg)
+runner = DiagnosticsRunner(posterior, x_train, thetas_train, obs, cfg,
+                           test_x=x_test, test_thetas=thetas_test)
 results = runner.run_all()
 
 print("\nAll diagnostics done. Numerical results:")

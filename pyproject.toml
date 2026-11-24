@@ -6,15 +6,22 @@ build-backend = "setuptools.build_meta"
 name = "sbi_diagnostics"
 version = "0.1.0"
 description = "Diagnostics for JAXILI NPE posteriors"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [{name = "Pauline Gorbatchev"}]
 requires-python = ">=3.11"
 dependencies = [
     "jax",
-    "jaxili",
     "numpy",
     "matplotlib",
     "scipy",
     "getdist",
 ]
+
+[project.optional-dependencies]
+# Needed only to train posteriors, as in example_run.py.
+# jaxili requires jax[cuda12], which is not available on macOS.
+jaxili = ["jaxili"]
 
 [tool.setuptools.packages.find]
 where = ["."]

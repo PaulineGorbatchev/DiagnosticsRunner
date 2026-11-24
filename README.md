@@ -14,7 +14,7 @@ It wraps a suite of standard SBI diagnostics — shrinkage tests, SBC rank histo
 | **Sensitivity to x** (Diag B) | Whether the posterior mean shifts when you condition on different simulations |
 | **SBC rank histograms** (Diag C) | Whether the posterior is calibrated (uniform ranks ⟹ well-calibrated) |
 | **Coverage probability** | Empirical vs nominal credibility across multiple levels |
-| **Posterior predictive check** | Whether simulations drawn from the posterior match the observed summary |
+| **Posterior predictive check** | Approximate check: the summary predicted at each posterior sample (mean of the nearest training simulations in parameter space) is compared with the observed summary |
 | **Parameter recovery** | Posterior mean vs true θ scatter (RMSE and bias reported) |
 | **Triangle plot** | getdist corner plot at the observed data, with optional overlays |
 | **Validation loss** | Training curve from JAXILI's `version_N/metrics/` output |
@@ -33,7 +33,15 @@ cd DiagnosticsRunner
 pip install -e .
 ```
 
-**Dependencies** (installed automatically): `jax`, `jaxili`, `numpy`, `matplotlib`, `scipy`, `getdist`.
+**Dependencies** (installed automatically): `jax`, `numpy`, `matplotlib`, `scipy`, `getdist`.
+
+The diagnostics themselves do not import `jaxili`. To also install it, for example to run [example_run.py](example_run.py), use
+
+```bash
+pip install -e ".[jaxili]"
+```
+
+`jaxili` depends on `jax[cuda12]`, which is not available on macOS.
 
 ---
 
@@ -46,6 +54,7 @@ from sbi_diagnostics import DiagnosticsConfig, DiagnosticsRunner
 # x          : simulation summaries, shape (N, d)
 # thetas     : simulation parameters, shape (N, n_params)
 # obs        : observed data summary, shape (d,)
+# test_x, test_thetas : held-out simulations, not used in training
 
 cfg = DiagnosticsConfig(
     output_dir="diagnosis",
@@ -55,9 +64,12 @@ cfg = DiagnosticsConfig(
     fiducial={"Om": 0.3, "h": 0.7},
 )
 
-runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg)
+runner = DiagnosticsRunner(posterior, x, thetas, obs, cfg,
+                           test_x=test_x, test_thetas=test_thetas)
 results = runner.run_all()
 ```
+
+SBC, coverage and parameter recovery are computed on `test_x` and `test_thetas`. These must be simulations that were not used to train the posterior, otherwise the calibration tests are not reliable. If they are omitted, these diagnostics fall back to `x` and `thetas` and a warning is issued.
 
 This writes all PDFs to `diagnosis/diagnosis_256/diagnosis_my_experiment/` and prints a numerical summary.
 
@@ -116,7 +128,8 @@ cfg = DiagnosticsConfig(
 
     # --- PPC ---
     ppc_num_samples = 100,
-    ppc_knn         = 5,
+    ppc_knn         = 5,                   # nearest simulations averaged per sample
+    ppc_noise_std   = 0.01,                # noise added to each predicted summary
 
     # --- Parameter recovery ---
     recovery_num_test    = 100,
@@ -132,7 +145,7 @@ cfg = DiagnosticsConfig(
 
     # --- Misc ---
     seed       = 123,
-    use_latex  = True,
+    use_latex  = True,                     # ignored if no LaTeX installation is found
 )
 ```
 

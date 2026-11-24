@@ -1,4 +1,11 @@
-"""Posterior Predictive Check."""
+"""Approximate posterior predictive check.
+
+No new simulations are run. For each posterior sample, the predicted summary
+is the mean of the summaries of the ``ppc_knn`` nearest simulations in
+parameter space, plus Gaussian noise of standard deviation ``ppc_noise_std``.
+The check compares the mean over the summary vector of these predictions
+with that of the observed summary.
+"""
 
 import os
 import numpy as np
@@ -18,21 +25,21 @@ def run(
     print("\n================ POSTERIOR PREDICTIVE CHECK ================")
 
     tree = cKDTree(thetas)
-
-    def simulate_l1_given_theta(theta):
-        _, idxs = tree.query(theta, k=cfg.ppc_knn)
-        mean_l1 = np.mean(x[idxs], axis=0)
-        return mean_l1 + 0.01 * np.random.randn(x.shape[1])
-
     rng = np.random.default_rng(cfg.seed)
+
+    def predict_summary(theta):
+        _, idxs = tree.query(theta, k=cfg.ppc_knn)
+        mean_summary = np.mean(x[idxs], axis=0)
+        return mean_summary + cfg.ppc_noise_std * rng.standard_normal(x.shape[1])
+
     chosen = rng.choice(samples_np.shape[0], cfg.ppc_num_samples, replace=False)
-    ppc_samples = np.array([simulate_l1_given_theta(samples_np[i]) for i in chosen])
+    ppc_samples = np.array([predict_summary(samples_np[i]) for i in chosen])
 
     plt.figure(figsize=(9, 6))
     plt.hist(np.mean(ppc_samples, axis=1), bins=30, alpha=0.75,
              edgecolor="black", label="Posterior predictive")
     plt.axvline(np.mean(obs), linestyle="--", linewidth=2, label="Observed")
-    plt.xlabel(r"Mean $\ell_1$")
+    plt.xlabel("Mean of the summary vector")
     plt.ylabel("Frequency")
     plt.title(r"Posterior Predictive Check")
     plt.legend()
